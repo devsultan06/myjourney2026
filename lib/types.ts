@@ -1,10 +1,11 @@
 // User Types
 export interface User {
   id: string;
-  name: string;
+  username: string;
   email: string;
   avatar?: string;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 // Book/Reading Types

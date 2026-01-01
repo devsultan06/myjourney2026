@@ -18,7 +18,6 @@ import {
   Trophy,
   X,
 } from "lucide-react";
-import { useState } from "react";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -34,11 +33,17 @@ const navigation = [
 interface SidebarProps {
   isMobileOpen: boolean;
   onMobileClose: () => void;
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
-export default function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
+export default function Sidebar({
+  isMobileOpen,
+  onMobileClose,
+  isCollapsed,
+  onToggleCollapse,
+}: SidebarProps) {
   const pathname = usePathname();
-  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const sidebarContent = (
     <>
@@ -52,7 +57,7 @@ export default function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
           </Link>
         )}
         <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          onClick={onToggleCollapse}
           className="hidden lg:flex p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
         >
           {isCollapsed ? (

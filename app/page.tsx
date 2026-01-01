@@ -323,10 +323,7 @@ export default function LandingPage() {
             to get started.
           </p>
           <Link href="/signup">
-            <Button
-              size="lg"
-              className="bg-white text-gray-900 hover:bg-gray-100"
-            >
+            <Button size="lg" className=" text-gray-900 bg-gray-100">
               Get Started for Free
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>

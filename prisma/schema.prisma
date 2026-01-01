@@ -1,0 +1,186 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// User model
+model User {
+  id            String   @id @default(cuid())
+  username      String   @unique
+  email         String   @unique
+  passwordHash  String
+  avatar        String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  books           Book[]
+  codingSessions  CodingSession[]
+  githubCommits   GitHubCommit[]
+  leetcodeProblems LeetCodeProblem[]
+  jobApplications JobApplication[]
+  projects        Project[]
+  events          Event[]
+}
+
+// Reading Tracker
+model Book {
+  id            String    @id @default(cuid())
+  title         String
+  author        String
+  totalPages    Int
+  currentPage   Int       @default(0)
+  status        String    @default("not-started") // not-started, reading, completed
+  startDate     DateTime?
+  completedDate DateTime?
+  notes         String?
+  rating        Int?
+  coverUrl      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Coding Practice Tracker
+model CodingSession {
+  id        String   @id @default(cuid())
+  date      DateTime @default(now())
+  duration  Int      // minutes
+  language  String
+  topic     String
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// GitHub Activity Tracker
+model GitHubCommit {
+  id         String   @id @default(cuid())
+  date       DateTime @default(now())
+  repository String
+  message    String
+  additions  Int      @default(0)
+  deletions  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// LeetCode Problem Tracker
+model LeetCodeProblem {
+  id         String    @id @default(cuid())
+  title      String
+  difficulty String    // easy, medium, hard
+  status     String    @default("not-started") // not-started, attempted, solved
+  solvedDate DateTime?
+  timeSpent  Int?      // minutes
+  notes      String?
+  topics     String[]  // Array of topic tags
+  leetcodeId Int?      // Original LeetCode problem ID
+  url        String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Job Application Tracker
+model JobApplication {
+  id          String   @id @default(cuid())
+  company     String
+  position    String
+  location    String
+  type        String   // remote, hybrid, onsite
+  status      String   @default("saved") // saved, applied, screening, interviewing, offer, rejected, accepted
+  appliedDate DateTime?
+  salary      String?
+  jobUrl      String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  timeline JobTimeline[]
+}
+
+model JobTimeline {
+  id        String   @id @default(cuid())
+  date      DateTime @default(now())
+  status    String
+  notes     String?
+  createdAt DateTime @default(now())
+
+  jobApplicationId String
+  jobApplication   JobApplication @relation(fields: [jobApplicationId], references: [id], onDelete: Cascade)
+}
+
+// Startup Project Tracker
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  status      String   @default("idea") // idea, planning, in-progress, launched, paused
+  techStack   String[] // Array of technologies
+  githubUrl   String?
+  liveUrl     String?
+  startDate   DateTime?
+  launchDate  DateTime?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  milestones Milestone[]
+}
+
+model Milestone {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  dueDate     DateTime?
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+// Events Tracker
+model Event {
+  id          String   @id @default(cuid())
+  name        String
+  type        String   // conference, meetup, workshop, hackathon, webinar
+  date        DateTime
+  location    String?
+  url         String?
+  attended    Boolean  @default(false)
+  takeaways   String?
+  connections Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

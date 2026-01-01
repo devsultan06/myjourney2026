@@ -2,19 +2,24 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, ArrowLeft, Check } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 
 export default function SignupPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
-    name: "",
+    username: "",
     email: "",
     password: "",
   });
+
+  const usernameValid = /^[a-zA-Z0-9_]{3,20}$/.test(formData.username);
 
   const passwordRequirements = [
     { label: "At least 8 characters", met: formData.password.length >= 8 },
@@ -25,9 +30,35 @@ export default function SignupPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate signup - replace with actual auth logic
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    window.location.href = "/dashboard";
+    setError("");
+
+    try {
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "Something went wrong");
+        setIsLoading(false);
+        return;
+      }
+
+      // Redirect to dashboard on success
+      router.push("/dashboard");
+    } catch {
+      setError("Network error. Please try again.");
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -104,17 +135,35 @@ export default function SignupPage() {
               Start tracking your journey to success.
             </p>
 
+            {error && (
+              <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
+                {error}
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-5">
-              <Input
-                label="Full name"
-                type="text"
-                placeholder="John Doe"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                required
-              />
+              <div>
+                <Input
+                  label="Username"
+                  type="text"
+                  placeholder="johndoe"
+                  value={formData.username}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      username: e.target.value
+                        .toLowerCase()
+                        .replace(/[^a-z0-9_]/g, ""),
+                    })
+                  }
+                  required
+                />
+                {formData.username && !usernameValid && (
+                  <p className="mt-1 text-xs text-amber-600">
+                    3-20 characters, letters, numbers, and underscores only
+                  </p>
+                )}
+              </div>
 
               <Input
                 label="Email address"
