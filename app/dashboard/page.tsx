@@ -44,6 +44,12 @@ export default function DashboardPage() {
     totalHours: 0,
   });
 
+  // Jobs stats from API
+  const [jobStats, setJobStats] = useState({
+    total: 0,
+    active: 0,
+  });
+
   // Streak from API
   const [streakData, setStreakData] = useState({
     streak: 0,
@@ -71,6 +77,8 @@ export default function DashboardPage() {
     leetcodeSolved: 0,
     workouts: 0,
     pagesRead: 0,
+    jobsApplied: 0,
+    eventsAttended: 0,
   });
 
   useEffect(() => {
@@ -180,10 +188,27 @@ export default function DashboardPage() {
             leetcodeSolved: data.weeklyStats?.leetcodeSolved || 0,
             workouts: data.weeklyStats?.workouts || 0,
             pagesRead: data.weeklyStats?.readingActivities || 0,
+            jobsApplied: data.weeklyStats?.jobsApplied || 0,
+            eventsAttended: data.weeklyStats?.eventsAttended || 0,
           });
         }
       } catch (error) {
         console.error("Failed to fetch weekly stats:", error);
+      }
+    };
+
+    const fetchJobStats = async () => {
+      try {
+        const response = await fetch("/api/jobs");
+        if (response.ok) {
+          const data = await response.json();
+          setJobStats({
+            total: data.stats?.total || 0,
+            active: data.stats?.active || 0,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch job stats:", error);
       }
     };
 
@@ -194,18 +219,13 @@ export default function DashboardPage() {
     fetchStreak();
     fetchRecentActivities();
     fetchWeeklyStats();
+    fetchJobStats();
   }, []);
 
   // Mock data for other stats - replace with actual data fetching later
   const dashboardData = {
     stats: {
       booksGoal: 24,
-      codingHours: 45,
-      workoutsDone: 45,
-      leetcodeSolved: 42,
-      jobsApplied: 8,
-      projectsActive: 2,
-      eventsAttended: 4,
     },
   };
 
@@ -317,8 +337,8 @@ export default function DashboardPage() {
         <Link href="/dashboard/jobs">
           <StatCard
             title="Jobs Applied"
-            value={dashboardData.stats.jobsApplied}
-            subtitle="Applications"
+            value={jobStats.total}
+            subtitle={`${jobStats.active} active`}
             icon={Briefcase}
             color="purple"
           />
@@ -481,7 +501,7 @@ export default function DashboardPage() {
                 This Week
               </CardTitle>
             </CardHeader>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div className="p-4 bg-green-50 rounded-xl">
                 <div className="flex items-center gap-2 mb-1">
                   <Code2 className="w-4 h-4 text-green-600" />
@@ -524,6 +544,28 @@ export default function DashboardPage() {
                 </div>
                 <p className="text-2xl font-bold text-blue-700">
                   {weeklyStats.pagesRead}
+                </p>
+              </div>
+              <div className="p-4 bg-purple-50 rounded-xl">
+                <div className="flex items-center gap-2 mb-1">
+                  <Briefcase className="w-4 h-4 text-purple-600" />
+                  <span className="text-sm text-purple-600 font-medium">
+                    Jobs
+                  </span>
+                </div>
+                <p className="text-2xl font-bold text-purple-700">
+                  {weeklyStats.jobsApplied}
+                </p>
+              </div>
+              <div className="p-4 bg-indigo-50 rounded-xl">
+                <div className="flex items-center gap-2 mb-1">
+                  <Calendar className="w-4 h-4 text-indigo-600" />
+                  <span className="text-sm text-indigo-600 font-medium">
+                    Events
+                  </span>
+                </div>
+                <p className="text-2xl font-bold text-indigo-700">
+                  {weeklyStats.eventsAttended}
                 </p>
               </div>
             </div>

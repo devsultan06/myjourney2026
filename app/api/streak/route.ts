@@ -11,9 +11,12 @@ async function getCurrentUserId(): Promise<string | null> {
   return payload?.userId || null;
 }
 
-// Helper to get date string (YYYY-MM-DD) for a given date
+// Helper to get date string (YYYY-MM-DD) in LOCAL timezone
 function getDateString(date: Date): string {
-  return date.toISOString().split("T")[0];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 // Calculate streak from activity dates
@@ -26,15 +29,24 @@ function calculateStreak(activityDates: Date[]): number {
     .reverse();
 
   const today = getDateString(new Date());
-  const yesterday = getDateString(new Date(Date.now() - 86400000));
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = getDateString(yesterday);
 
   // Check if the most recent activity is today or yesterday
-  if (uniqueDates[0] !== today && uniqueDates[0] !== yesterday) {
+  if (uniqueDates[0] !== today && uniqueDates[0] !== yesterdayStr) {
     return 0; // Streak broken
   }
 
   let streak = 1;
-  let currentDate = new Date(uniqueDates[0]);
+
+  // Parse date properly to avoid timezone issues
+  const parseDate = (dateStr: string): Date => {
+    const [year, month, day] = dateStr.split("-").map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  let currentDate = parseDate(uniqueDates[0]);
 
   for (let i = 1; i < uniqueDates.length; i++) {
     const prevDate = new Date(currentDate);
@@ -102,11 +114,23 @@ export async function GET() {
     // Get total activity count
     const totalActivities = await prisma.activity.count({ where: { userId } });
 
+    // Debug: Get unique activity dates
+    const uniqueActivityDates = [
+      ...new Set(allDates.map((d) => getDateString(d))),
+    ]
+      .sort()
+      .reverse();
+
     return NextResponse.json({
       streak: overallStreak,
       streaks: categoryStreaks,
       hasActivityToday,
       totalActivities,
+      debug: {
+        today: getDateString(new Date()),
+        uniqueDates: uniqueActivityDates.slice(0, 10), // Last 10 unique dates
+        totalUniquedays: uniqueActivityDates.length,
+      },
     });
   } catch (error) {
     console.error("Get streak error:", error);

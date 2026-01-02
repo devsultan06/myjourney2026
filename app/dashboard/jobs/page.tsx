@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Briefcase,
@@ -23,52 +23,33 @@ import Textarea from "@/components/ui/Textarea";
 import Select from "@/components/ui/Select";
 import Badge from "@/components/ui/Badge";
 import EmptyState from "@/components/ui/EmptyState";
-import { JobApplication } from "@/lib/types";
-import { generateId, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
-// Mock data
-const initialJobs: JobApplication[] = [
-  {
-    id: "1",
-    company: "TechCorp",
-    position: "Senior Frontend Developer",
-    location: "San Francisco, CA",
-    type: "hybrid",
-    status: "interview",
-    appliedDate: new Date("2026-01-10"),
-    salary: "$180k - $220k",
-    notes: "Great culture, interesting tech stack",
-    url: "https://techcorp.com/careers",
-    contacts: [],
-    timeline: [],
-  },
-  {
-    id: "2",
-    company: "StartupXYZ",
-    position: "Full Stack Engineer",
-    location: "New York, NY",
-    type: "remote",
-    status: "applied",
-    appliedDate: new Date("2026-01-12"),
-    salary: "$150k - $180k",
-    notes: "Early stage startup, equity package",
-    contacts: [],
-    timeline: [],
-  },
-  {
-    id: "3",
-    company: "BigTech Inc",
-    position: "Software Engineer",
-    location: "Seattle, WA",
-    type: "onsite",
-    status: "screening",
-    appliedDate: new Date("2026-01-08"),
-    salary: "$200k - $250k",
-    notes: "FAANG company, tough interview process",
-    contacts: [],
-    timeline: [],
-  },
-];
+interface JobApplication {
+  id: string;
+  company: string;
+  position: string;
+  location: string;
+  type: "remote" | "hybrid" | "onsite";
+  status:
+    | "wishlist"
+    | "applied"
+    | "screening"
+    | "interview"
+    | "offer"
+    | "rejected"
+    | "accepted";
+  appliedDate?: string | null;
+  salary?: string | null;
+  notes?: string | null;
+  jobUrl?: string | null;
+  timeline?: Array<{
+    id: string;
+    date: string;
+    status: string;
+    notes?: string | null;
+  }>;
+}
 
 const statusSteps = [
   "wishlist",
@@ -80,8 +61,10 @@ const statusSteps = [
 ] as const;
 
 export default function JobsPage() {
-  const [jobs, setJobs] = useState<JobApplication[]>(initialJobs);
+  const [jobs, setJobs] = useState<JobApplication[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [editingJob, setEditingJob] = useState<JobApplication | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -95,6 +78,25 @@ export default function JobsPage() {
     notes: "",
     url: "",
   });
+
+  // Fetch jobs from API
+  useEffect(() => {
+    fetchJobs();
+  }, []);
+
+  const fetchJobs = async () => {
+    try {
+      const response = await fetch("/api/jobs");
+      if (response.ok) {
+        const data = await response.json();
+        setJobs(data.jobs);
+      }
+    } catch (error) {
+      console.error("Failed to fetch jobs:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredJobs = jobs.filter((job) => {
     const matchesSearch =
@@ -136,40 +138,84 @@ export default function JobsPage() {
       type: job.type,
       status: job.status,
       salary: job.salary || "",
-      notes: job.notes,
-      url: job.url || "",
+      notes: job.notes || "",
+      url: job.jobUrl || "",
     });
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const jobData: JobApplication = {
-      id: editingJob?.id || generateId(),
-      company: formData.company,
-      position: formData.position,
-      location: formData.location,
-      type: formData.type as JobApplication["type"],
-      status: formData.status as JobApplication["status"],
-      appliedDate: formData.status !== "wishlist" ? new Date() : undefined,
-      salary: formData.salary || undefined,
-      notes: formData.notes,
-      url: formData.url || undefined,
-      contacts: editingJob?.contacts || [],
-      timeline: editingJob?.timeline || [],
-    };
+    setIsSaving(true);
 
-    if (editingJob) {
-      setJobs(jobs.map((j) => (j.id === editingJob.id ? jobData : j)));
-    } else {
-      setJobs([jobData, ...jobs]);
+    try {
+      if (editingJob) {
+        // Update existing job
+        const response = await fetch(`/api/jobs/${editingJob.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            company: formData.company,
+            position: formData.position,
+            location: formData.location,
+            type: formData.type,
+            status: formData.status,
+            salary: formData.salary,
+            notes: formData.notes,
+            url: formData.url,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setJobs(jobs.map((j) => (j.id === editingJob.id ? data.job : j)));
+        }
+      } else {
+        // Create new job
+        const response = await fetch("/api/jobs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            company: formData.company,
+            position: formData.position,
+            location: formData.location,
+            type: formData.type,
+            status: formData.status,
+            salary: formData.salary,
+            notes: formData.notes,
+            url: formData.url,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setJobs([data.job, ...jobs]);
+        }
+      }
+
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Failed to save job:", error);
+    } finally {
+      setIsSaving(false);
     }
-
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    setJobs(jobs.filter((j) => j.id !== id));
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this job application?"))
+      return;
+
+    try {
+      const response = await fetch(`/api/jobs/${id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setJobs(jobs.filter((j) => j.id !== id));
+      }
+    } catch (error) {
+      console.error("Failed to delete job:", error);
+    }
   };
 
   const getStatusBadge = (status: JobApplication["status"]) => {
@@ -206,6 +252,14 @@ export default function JobsPage() {
     };
     return <span className="text-xs text-gray-500">{labels[type]}</span>;
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -382,7 +436,7 @@ export default function JobsPage() {
                     {job.appliedDate && (
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
-                        {formatDate(job.appliedDate)}
+                        {formatDate(new Date(job.appliedDate))}
                       </span>
                     )}
                     {job.salary && (
@@ -397,9 +451,9 @@ export default function JobsPage() {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  {job.url && (
+                  {job.jobUrl && (
                     <a
-                      href={job.url}
+                      href={job.jobUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
@@ -530,7 +584,7 @@ export default function JobsPage() {
             >
               Cancel
             </Button>
-            <Button type="submit" className="flex-1">
+            <Button type="submit" className="flex-1" isLoading={isSaving}>
               {editingJob ? "Save Changes" : "Add Job"}
             </Button>
           </div>

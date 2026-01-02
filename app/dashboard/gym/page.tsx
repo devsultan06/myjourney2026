@@ -18,6 +18,7 @@ import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import StreakBadge from "@/components/ui/StreakBadge";
+import { getLocalDateString } from "@/lib/utils";
 
 interface Exercise {
   id: string;
@@ -62,7 +63,7 @@ export default function GymPage() {
   const fetchExercises = async () => {
     try {
       // Get exercises for this year
-      const startDate = new Date("2026-01-01").toISOString().split("T")[0];
+      const startDate = "2026-01-01";
       const response = await fetch(`/api/exercises?startDate=${startDate}`);
       if (response.ok) {
         const data = await response.json();
@@ -89,7 +90,7 @@ export default function GymPage() {
 
   // Get exercises for a specific date
   const getExercisesForDate = (date: Date) => {
-    const dateStr = date.toISOString().split("T")[0];
+    const dateStr = getLocalDateString(date);
     return exercises.filter((e) => e.date.split("T")[0] === dateStr);
   };
 
@@ -101,7 +102,7 @@ export default function GymPage() {
 
   // Toggle today's exercise completion
   const toggleTodayExercise = async (exerciseType: string, target: number) => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = getLocalDateString(new Date());
     const existing = exercises.find(
       (e) => e.date.split("T")[0] === today && e.exerciseType === exerciseType
     );
@@ -144,7 +145,7 @@ export default function GymPage() {
     setIsSaving(true);
 
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const today = getLocalDateString(new Date());
       await fetch("/api/exercises", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

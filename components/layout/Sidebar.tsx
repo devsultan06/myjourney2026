@@ -27,7 +27,7 @@ const navigation = [
   { name: "Gym Tracker", href: "/dashboard/gym", icon: Dumbbell },
   { name: "LeetCode", href: "/dashboard/leetcode", icon: Trophy },
   { name: "Job Applications", href: "/dashboard/jobs", icon: Briefcase },
-  { name: "Startup Projects", href: "/dashboard/projects", icon: Rocket },
+  // { name: "Startup Projects", href: "/dashboard/projects", icon: Rocket },
   { name: "Events", href: "/dashboard/events", icon: Calendar },
 ];
 

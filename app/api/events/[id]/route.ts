@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
+import { parseLocalDate } from "@/lib/utils";
 
 // PUT /api/events/[id] - Update an event
 export async function PUT(
@@ -52,7 +53,7 @@ export async function PUT(
       data: {
         name: name !== undefined ? name : existingEvent.name,
         type: type !== undefined ? type : existingEvent.type,
-        date: date !== undefined ? new Date(date) : existingEvent.date,
+        date: date !== undefined ? parseLocalDate(date) : existingEvent.date,
         location: location !== undefined ? location : existingEvent.location,
         isVirtual:
           isVirtual !== undefined ? isVirtual : existingEvent.isVirtual,

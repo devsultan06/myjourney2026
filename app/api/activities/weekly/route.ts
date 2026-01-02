@@ -66,12 +66,30 @@ export async function GET() {
       },
     });
 
+    // Get job applications this week
+    const jobsApplied = await prisma.jobApplication.count({
+      where: {
+        userId,
+        createdAt: { gte: startOfWeek },
+      },
+    });
+
+    // Get events attended this week
+    const eventsAttended = await prisma.event.count({
+      where: {
+        userId,
+        createdAt: { gte: startOfWeek },
+      },
+    });
+
     return NextResponse.json({
       weeklyStats: {
         codingHours,
         leetcodeSolved: leetcodeProblems,
         workouts,
         readingActivities: booksActivity,
+        jobsApplied,
+        eventsAttended,
       },
       weekStart: startOfWeek.toISOString(),
     });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken, getAuthCookie } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parseLocalDate, getLocalToday, getLocalDateString } from "@/lib/utils";
 
 // Helper to get current user ID
 async function getCurrentUserId(): Promise<string | null> {
@@ -40,14 +41,12 @@ export async function GET(request: NextRequest) {
     });
 
     // Calculate stats
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = getLocalToday();
+    const todayStr = getLocalDateString(today);
 
     const totalWorkouts = exercises.filter((e) => e.isCompleted).length;
     const todayExercises = exercises.filter((e) => {
-      const exerciseDate = new Date(e.date);
-      exerciseDate.setHours(0, 0, 0, 0);
-      return exerciseDate.getTime() === today.getTime();
+      return getLocalDateString(new Date(e.date)) === todayStr;
     });
 
     return NextResponse.json({
@@ -85,8 +84,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const exerciseDate = date ? new Date(date) : new Date();
-    exerciseDate.setHours(0, 0, 0, 0);
+    // Parse date properly - if date string is YYYY-MM-DD, parse as local date
+    let exerciseDate: Date;
+    if (date) {
+      // Parse YYYY-MM-DD as local date to avoid timezone issues
+      exerciseDate = parseLocalDate(date);
+      console.log("DEBUG: Received date string:", date);
+      console.log("DEBUG: Parsed as:", exerciseDate.toISOString());
+      console.log(
+        "DEBUG: Local date parts:",
+        exerciseDate.getFullYear(),
+        exerciseDate.getMonth() + 1,
+        exerciseDate.getDate()
+      );
+    } else {
+      exerciseDate = getLocalToday();
+      console.log("DEBUG: Using today:", exerciseDate.toISOString());
+    }
 
     // Upsert - create or update if exists for same date and type
     const exercise = await prisma.exercise.upsert({

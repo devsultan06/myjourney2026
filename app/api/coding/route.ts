@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken, getAuthCookie } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parseLocalDate, getLocalToday } from "@/lib/utils";
 
 // Helper to get current user ID
 async function getCurrentUserId(): Promise<string | null> {
@@ -72,7 +73,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const sessionDate = date ? new Date(date) : new Date();
+    // Parse date properly - if date string is YYYY-MM-DD, parse as local date
+    const sessionDate = date ? parseLocalDate(date) : getLocalToday();
 
     const session = await prisma.codingSession.create({
       data: {

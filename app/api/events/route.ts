@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
+import { parseLocalDate } from "@/lib/utils";
 
 // GET /api/events - Get all events for the current user
 export async function GET() {
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
       data: {
         name,
         type,
-        date: new Date(date),
+        date: parseLocalDate(date),
         location,
         isVirtual: isVirtual || false,
         description: description || null,
