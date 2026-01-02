@@ -10,7 +10,6 @@ import {
   Code2,
   Dumbbell,
   Briefcase,
-  Rocket,
   Calendar,
   Settings,
   LogOut,
