@@ -77,7 +77,17 @@ export function generateId(): string {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
 
-// Get date string (YYYY-MM-DD) in LOCAL timezone - avoids UTC conversion issues
+// Get date string (YYYY-MM-DD) from a Date object stored in database
+// Uses UTC methods since we store dates at UTC noon
+export function getDateStringFromDB(date: Date): string {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+// Get today's date string (YYYY-MM-DD) in user's local timezone
+// Use this on client-side to get "today" for the user
 export function getLocalDateString(date: Date = new Date()): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -85,15 +95,19 @@ export function getLocalDateString(date: Date = new Date()): string {
   return `${year}-${month}-${day}`;
 }
 
-// Parse a YYYY-MM-DD string as a LOCAL date (not UTC)
+// Parse a YYYY-MM-DD string as UTC noon to avoid timezone shifting
+// Using UTC noon (12:00) ensures the date doesn't shift regardless of timezone
 export function parseLocalDate(dateStr: string): Date {
   const [year, month, day] = dateStr.split("-").map(Number);
-  return new Date(year, month - 1, day);
+  // Create date at UTC noon to prevent date shifting
+  return new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
 }
 
-// Get today's date at midnight in local timezone
+// Get today's date at UTC noon for storing in database
 export function getLocalToday(): Date {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return today;
+  const now = new Date();
+  // Use UTC noon to prevent date shifting when stored in database
+  return new Date(
+    Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0, 0)
+  );
 }

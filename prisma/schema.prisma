@@ -28,6 +28,8 @@ model User {
   projects        Project[]
   events          Event[]
   activities      Activity[]
+  notifications   Notification[]
+  dailyTasks      DailyTask[]
 }
 
 // Activity Tracker for Streaks
@@ -202,4 +204,40 @@ model Event {
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Notification System
+model Notification {
+  id        String   @id @default(cuid())
+  type      String   // streak_warning, streak_achieved, event_reminder, job_followup, daily_reminder, achievement
+  title     String
+  message   String
+  icon      String?  // emoji or icon name
+  link      String?  // optional link to navigate to
+  isRead    Boolean  @default(false)
+  priority  String   @default("normal") // low, normal, high, urgent
+  expiresAt DateTime? // optional expiration for time-sensitive notifications
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+}
+
+// Daily Tasks (Personal Todo List - Separate from trackers)
+model DailyTask {
+  id          String   @id @default(cuid())
+  title       String
+  isCompleted Boolean  @default(false)
+  date        DateTime @db.Date  // The date this task is for
+  order       Int      @default(0) // For sorting tasks
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
 }

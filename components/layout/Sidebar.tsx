@@ -18,10 +18,12 @@ import {
   ChevronRight,
   Trophy,
   X,
+  ListTodo,
 } from "lucide-react";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Daily Tasks", href: "/dashboard/tasks", icon: ListTodo },
   { name: "Reading List", href: "/dashboard/reading", icon: BookOpen },
   { name: "Coding Practice", href: "/dashboard/coding", icon: Code2 },
   { name: "Gym Tracker", href: "/dashboard/gym", icon: Dumbbell },

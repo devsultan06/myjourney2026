@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken, getAuthCookie } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { parseLocalDate, getLocalToday, getLocalDateString } from "@/lib/utils";
+import {
+  parseLocalDate,
+  getLocalToday,
+  getDateStringFromDB,
+} from "@/lib/utils";
 
 // Helper to get current user ID
 async function getCurrentUserId(): Promise<string | null> {
@@ -42,11 +46,11 @@ export async function GET(request: NextRequest) {
 
     // Calculate stats
     const today = getLocalToday();
-    const todayStr = getLocalDateString(today);
+    const todayStr = getDateStringFromDB(today);
 
     const totalWorkouts = exercises.filter((e) => e.isCompleted).length;
     const todayExercises = exercises.filter((e) => {
-      return getLocalDateString(new Date(e.date)) === todayStr;
+      return getDateStringFromDB(new Date(e.date)) === todayStr;
     });
 
     return NextResponse.json({

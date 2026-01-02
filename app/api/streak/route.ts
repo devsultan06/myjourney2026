@@ -11,11 +11,21 @@ async function getCurrentUserId(): Promise<string | null> {
   return payload?.userId || null;
 }
 
-// Helper to get date string (YYYY-MM-DD) in LOCAL timezone
+// Helper to get date string (YYYY-MM-DD) from UTC date
+// Uses UTC methods since we store dates at UTC noon
 function getDateString(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+// Get today's date string using local timezone (for user's "today")
+function getTodayString(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
@@ -28,29 +38,32 @@ function calculateStreak(activityDates: Date[]): number {
     .sort()
     .reverse();
 
-  const today = getDateString(new Date());
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = getDateString(yesterday);
+  const today = getTodayString();
+  // Calculate yesterday in local timezone
+  const yesterdayDate = new Date();
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterday = `${yesterdayDate.getFullYear()}-${String(
+    yesterdayDate.getMonth() + 1
+  ).padStart(2, "0")}-${String(yesterdayDate.getDate()).padStart(2, "0")}`;
 
   // Check if the most recent activity is today or yesterday
-  if (uniqueDates[0] !== today && uniqueDates[0] !== yesterdayStr) {
+  if (uniqueDates[0] !== today && uniqueDates[0] !== yesterday) {
     return 0; // Streak broken
   }
 
   let streak = 1;
 
-  // Parse date properly to avoid timezone issues
+  // Parse date as UTC noon (matching how we store dates)
   const parseDate = (dateStr: string): Date => {
     const [year, month, day] = dateStr.split("-").map(Number);
-    return new Date(year, month - 1, day);
+    return new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
   };
 
   let currentDate = parseDate(uniqueDates[0]);
 
   for (let i = 1; i < uniqueDates.length; i++) {
     const prevDate = new Date(currentDate);
-    prevDate.setDate(prevDate.getDate() - 1);
+    prevDate.setUTCDate(prevDate.getUTCDate() - 1);
 
     if (getDateString(prevDate) === uniqueDates[i]) {
       streak++;
