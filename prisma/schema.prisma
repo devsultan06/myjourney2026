@@ -22,7 +22,7 @@ model User {
   // Relations
   books           Book[]
   codingSessions  CodingSession[]
-  githubCommits   GitHubCommit[]
+  exercises       Exercise[]
   leetcodeProblems LeetCodeProblem[]
   jobApplications JobApplication[]
   projects        Project[]
@@ -80,19 +80,23 @@ model CodingSession {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// GitHub Activity Tracker
-model GitHubCommit {
-  id         String   @id @default(cuid())
-  date       DateTime @default(now())
-  repository String
-  message    String
-  additions  Int      @default(0)
-  deletions  Int      @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+// Exercise/Gym Tracker
+model Exercise {
+  id          String   @id @default(cuid())
+  date        DateTime @db.Date
+  exerciseType String  // push-ups, sit-ups, squats, running, etc.
+  target      Int      // target reps or minutes
+  completed   Int      // actual reps or minutes completed
+  isCompleted Boolean  @default(false) // did they meet/exceed target?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date, exerciseType]) // One entry per exercise type per day
+  @@index([userId, date])
 }
 
 // LeetCode Problem Tracker
@@ -185,13 +189,14 @@ model Milestone {
 model Event {
   id          String   @id @default(cuid())
   name        String
-  type        String   // conference, meetup, workshop, hackathon, webinar
+  type        String   // conference, meetup, workshop, hackathon, webinar, other
   date        DateTime
-  location    String?
-  url         String?
-  attended    Boolean  @default(false)
+  location    String
+  isVirtual   Boolean  @default(false)
+  description String?
   takeaways   String?
-  connections Int      @default(0)
+  url         String?
+  attendees   Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

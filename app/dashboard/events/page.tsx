@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Calendar,
@@ -21,50 +21,31 @@ import Select from "@/components/ui/Select";
 import Badge from "@/components/ui/Badge";
 import EmptyState from "@/components/ui/EmptyState";
 import Checkbox from "@/components/ui/Checkbox";
-import { Event } from "@/lib/types";
-import { generateId } from "@/lib/utils";
 
-// Mock data
-const initialEvents: Event[] = [
-  {
-    id: "1",
-    name: "React Summit 2026",
-    type: "conference",
-    date: new Date("2026-02-15"),
-    location: "Amsterdam, Netherlands",
-    isVirtual: false,
-    description: "The biggest React conference in the world",
-    takeaways: "Learned about React 19 features and server components",
-    url: "https://reactsummit.com",
-    attendees: 2000,
-  },
-  {
-    id: "2",
-    name: "Local Tech Meetup",
-    type: "meetup",
-    date: new Date("2026-01-20"),
-    location: "San Francisco, CA",
-    isVirtual: false,
-    description: "Monthly tech meetup for local developers",
-    takeaways: "Great networking, met some potential collaborators",
-    attendees: 50,
-  },
-  {
-    id: "3",
-    name: "Building AI Products Workshop",
-    type: "workshop",
-    date: new Date("2026-01-25"),
-    location: "Online",
-    isVirtual: true,
-    description: "Hands-on workshop on building AI-powered applications",
-    takeaways: "Practical insights on integrating LLMs into products",
-    url: "https://example.com/workshop",
-  },
-];
+interface Event {
+  id: string;
+  name: string;
+  type:
+    | "conference"
+    | "meetup"
+    | "workshop"
+    | "webinar"
+    | "hackathon"
+    | "other";
+  date: string;
+  location: string;
+  isVirtual: boolean;
+  description?: string | null;
+  takeaways?: string | null;
+  url?: string | null;
+  attendees?: number | null;
+}
 
 export default function EventsPage() {
-  const [events, setEvents] = useState<Event[]>(initialEvents);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -77,6 +58,25 @@ export default function EventsPage() {
     url: "",
     attendees: "",
   });
+
+  // Fetch events from API
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  const fetchEvents = async () => {
+    try {
+      const response = await fetch("/api/events");
+      if (response.ok) {
+        const data = await response.json();
+        setEvents(data.events);
+      }
+    } catch (error) {
+      console.error("Failed to fetch events:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const stats = {
     total: events.length,
@@ -122,44 +122,93 @@ export default function EventsPage() {
       date: new Date(event.date).toISOString().split("T")[0],
       location: event.location,
       isVirtual: event.isVirtual,
-      description: event.description,
-      takeaways: event.takeaways,
+      description: event.description || "",
+      takeaways: event.takeaways || "",
       url: event.url || "",
       attendees: event.attendees?.toString() || "",
     });
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const eventData: Event = {
-      id: editingEvent?.id || generateId(),
-      name: formData.name,
-      type: formData.type as Event["type"],
-      date: new Date(formData.date),
-      location: formData.location,
-      isVirtual: formData.isVirtual,
-      description: formData.description,
-      takeaways: formData.takeaways,
-      url: formData.url || undefined,
-      attendees: parseInt(formData.attendees) || undefined,
-    };
+    setIsSaving(true);
 
-    if (editingEvent) {
-      setEvents(events.map((e) => (e.id === editingEvent.id ? eventData : e)));
-    } else {
-      setEvents(
-        [eventData, ...events].sort(
-          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-        )
-      );
+    try {
+      if (editingEvent) {
+        // Update existing event
+        const response = await fetch(`/api/events/${editingEvent.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: formData.name,
+            type: formData.type,
+            date: formData.date,
+            location: formData.location,
+            isVirtual: formData.isVirtual,
+            description: formData.description,
+            takeaways: formData.takeaways,
+            url: formData.url,
+            attendees: formData.attendees,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setEvents(
+            events.map((e) => (e.id === editingEvent.id ? data.event : e))
+          );
+        }
+      } else {
+        // Create new event
+        const response = await fetch("/api/events", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: formData.name,
+            type: formData.type,
+            date: formData.date,
+            location: formData.location,
+            isVirtual: formData.isVirtual,
+            description: formData.description,
+            takeaways: formData.takeaways,
+            url: formData.url,
+            attendees: formData.attendees,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setEvents(
+            [data.event, ...events].sort(
+              (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+            )
+          );
+        }
+      }
+
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Failed to save event:", error);
+    } finally {
+      setIsSaving(false);
     }
-
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    setEvents(events.filter((e) => e.id !== id));
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this event?")) return;
+
+    try {
+      const response = await fetch(`/api/events/${id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setEvents(events.filter((e) => e.id !== id));
+      }
+    } catch (error) {
+      console.error("Failed to delete event:", error);
+    }
   };
 
   const getTypeBadge = (type: Event["type"]) => {
@@ -186,6 +235,14 @@ export default function EventsPage() {
     const { variant, label } = variants[type];
     return <Badge variant={variant}>{label}</Badge>;
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -454,7 +511,7 @@ export default function EventsPage() {
             >
               Cancel
             </Button>
-            <Button type="submit" className="flex-1">
+            <Button type="submit" className="flex-1" isLoading={isSaving}>
               {editingEvent ? "Save Changes" : "Add Event"}
             </Button>
           </div>

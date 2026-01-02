@@ -31,6 +31,7 @@ interface Book {
   completedDate?: string | null;
   notes?: string | null;
   rating?: number | null;
+  coverUrl?: string | null;
 }
 
 export default function ReadingPage() {
@@ -47,6 +48,7 @@ export default function ReadingPage() {
     totalPages: "",
     currentPage: "",
     notes: "",
+    coverUrl: "",
   });
 
   // Fetch books from API
@@ -93,6 +95,7 @@ export default function ReadingPage() {
       totalPages: "",
       currentPage: "",
       notes: "",
+      coverUrl: "",
     });
     setIsModalOpen(true);
   };
@@ -105,6 +108,7 @@ export default function ReadingPage() {
       totalPages: book.totalPages.toString(),
       currentPage: book.currentPage.toString(),
       notes: book.notes || "",
+      coverUrl: book.coverUrl || "",
     });
     setIsModalOpen(true);
   };

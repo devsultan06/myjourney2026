@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Code2,
@@ -21,36 +21,16 @@ import Select from "@/components/ui/Select";
 import Badge from "@/components/ui/Badge";
 import EmptyState from "@/components/ui/EmptyState";
 import StreakBadge from "@/components/ui/StreakBadge";
-import { CodingSession } from "@/lib/types";
-import { generateId, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
-// Mock data
-const initialSessions: CodingSession[] = [
-  {
-    id: "1",
-    date: new Date("2026-01-15"),
-    duration: 120,
-    language: "TypeScript",
-    topic: "Building My2026Journey dashboard",
-    notes: "Worked on the main dashboard layout and components.",
-  },
-  {
-    id: "2",
-    date: new Date("2026-01-14"),
-    duration: 90,
-    language: "Python",
-    topic: "Machine learning basics",
-    notes: "Completed intro to pandas and numpy.",
-  },
-  {
-    id: "3",
-    date: new Date("2026-01-13"),
-    duration: 60,
-    language: "JavaScript",
-    topic: "React hooks deep dive",
-    notes: "useCallback and useMemo optimization.",
-  },
-];
+interface CodingSession {
+  id: string;
+  date: string;
+  duration: number;
+  language: string;
+  topic: string;
+  notes?: string | null;
+}
 
 const languages = [
   "TypeScript",
@@ -68,11 +48,14 @@ const languages = [
 ];
 
 export default function CodingPage() {
-  const [sessions, setSessions] = useState<CodingSession[]>(initialSessions);
+  const [sessions, setSessions] = useState<CodingSession[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [editingSession, setEditingSession] = useState<CodingSession | null>(
     null
   );
+  const [codingStreak, setCodingStreak] = useState(0);
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split("T")[0],
     duration: "",
@@ -81,12 +64,44 @@ export default function CodingPage() {
     notes: "",
   });
 
+  // Fetch sessions from API
+  useEffect(() => {
+    fetchSessions();
+    fetchStreak();
+  }, []);
+
+  const fetchSessions = async () => {
+    try {
+      const response = await fetch("/api/coding");
+      if (response.ok) {
+        const data = await response.json();
+        setSessions(data.sessions);
+      }
+    } catch (error) {
+      console.error("Failed to fetch sessions:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchStreak = async () => {
+    try {
+      const response = await fetch("/api/streak");
+      if (response.ok) {
+        const data = await response.json();
+        setCodingStreak(data.streaks?.coding || 0);
+      }
+    } catch (error) {
+      console.error("Failed to fetch streak:", error);
+    }
+  };
+
   const stats = {
     totalHours: Math.round(
       sessions.reduce((acc, s) => acc + s.duration, 0) / 60
     ),
     totalSessions: sessions.length,
-    streak: 12, // Mock streak
+    streak: codingStreak,
     avgSessionLength: sessions.length
       ? Math.round(
           sessions.reduce((acc, s) => acc + s.duration, 0) / sessions.length
@@ -128,35 +143,79 @@ export default function CodingPage() {
       duration: session.duration.toString(),
       language: session.language,
       topic: session.topic,
-      notes: session.notes,
+      notes: session.notes || "",
     });
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const sessionData: CodingSession = {
-      id: editingSession?.id || generateId(),
-      date: new Date(formData.date),
-      duration: parseInt(formData.duration) || 0,
-      language: formData.language,
-      topic: formData.topic,
-      notes: formData.notes,
-    };
+    setIsSaving(true);
 
-    if (editingSession) {
-      setSessions(
-        sessions.map((s) => (s.id === editingSession.id ? sessionData : s))
-      );
-    } else {
-      setSessions([sessionData, ...sessions]);
+    try {
+      if (editingSession) {
+        // Update existing session
+        const response = await fetch(`/api/coding/${editingSession.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            date: formData.date,
+            duration: formData.duration,
+            language: formData.language,
+            topic: formData.topic,
+            notes: formData.notes,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setSessions(
+            sessions.map((s) => (s.id === editingSession.id ? data.session : s))
+          );
+        }
+      } else {
+        // Create new session
+        const response = await fetch("/api/coding", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            date: formData.date,
+            duration: formData.duration,
+            language: formData.language,
+            topic: formData.topic,
+            notes: formData.notes,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setSessions([data.session, ...sessions]);
+          await fetchStreak();
+        }
+      }
+
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Failed to save session:", error);
+    } finally {
+      setIsSaving(false);
     }
-
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    setSessions(sessions.filter((s) => s.id !== id));
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this session?")) return;
+
+    try {
+      const response = await fetch(`/api/coding/${id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setSessions(sessions.filter((s) => s.id !== id));
+      }
+    } catch (error) {
+      console.error("Failed to delete session:", error);
+    }
   };
 
   const formatDuration = (minutes: number) => {
@@ -179,6 +238,14 @@ export default function CodingPage() {
     };
     return colors[language] || "bg-gray-100 text-gray-700";
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -316,7 +383,7 @@ export default function CodingPage() {
                         {session.topic}
                       </h4>
                       <p className="text-sm text-gray-500">
-                        {formatDate(session.date)}
+                        {formatDate(new Date(session.date))}
                       </p>
                     </div>
                     <Badge className={getLanguageColor(session.language)}>
@@ -421,7 +488,7 @@ export default function CodingPage() {
             >
               Cancel
             </Button>
-            <Button type="submit" className="flex-1">
+            <Button type="submit" className="flex-1" isLoading={isSaving}>
               {editingSession ? "Save Changes" : "Log Session"}
             </Button>
           </div>

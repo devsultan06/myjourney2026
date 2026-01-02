@@ -5,12 +5,10 @@ import { motion } from "framer-motion";
 import {
   BookOpen,
   Code2,
-  Github,
+  Dumbbell,
   Trophy,
   Briefcase,
-  Rocket,
   Calendar,
-  TrendingUp,
   Target,
   Clock,
   Flame,
@@ -18,7 +16,6 @@ import {
 import Link from "next/link";
 import Card, { CardHeader, CardTitle } from "@/components/ui/Card";
 import StatCard from "@/components/ui/StatCard";
-import ProgressBar from "@/components/ui/ProgressBar";
 import StreakBadge from "@/components/ui/StreakBadge";
 import { getYearProgress } from "@/lib/utils";
 
@@ -32,6 +29,21 @@ export default function DashboardPage() {
     reading: 0,
   });
 
+  // LeetCode stats from API
+  const [leetcodeStats, setLeetcodeStats] = useState({
+    solved: 0,
+  });
+
+  // Workout stats from API
+  const [workoutStats, setWorkoutStats] = useState({
+    totalWorkouts: 0,
+  });
+
+  // Coding stats from API
+  const [codingStats, setCodingStats] = useState({
+    totalHours: 0,
+  });
+
   // Streak from API
   const [streakData, setStreakData] = useState({
     streak: 0,
@@ -40,7 +52,25 @@ export default function DashboardPage() {
       coding: 0,
       leetcode: 0,
       reading: 0,
+      gym: 0,
     },
+  });
+
+  // Recent activities from API
+  interface Activity {
+    id: string;
+    type: string;
+    title: string;
+    time: string;
+  }
+  const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
+
+  // Weekly stats
+  const [weeklyStats, setWeeklyStats] = useState({
+    codingHours: 0,
+    leetcodeSolved: 0,
+    workouts: 0,
+    pagesRead: 0,
   });
 
   useEffect(() => {
@@ -65,6 +95,48 @@ export default function DashboardPage() {
       }
     };
 
+    const fetchLeetcodeStats = async () => {
+      try {
+        const response = await fetch("/api/leetcode");
+        if (response.ok) {
+          const data = await response.json();
+          setLeetcodeStats({
+            solved: data.stats?.solved || 0,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch leetcode stats:", error);
+      }
+    };
+
+    const fetchWorkoutStats = async () => {
+      try {
+        const response = await fetch("/api/exercises");
+        if (response.ok) {
+          const data = await response.json();
+          setWorkoutStats({
+            totalWorkouts: data.stats?.totalWorkouts || 0,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch workout stats:", error);
+      }
+    };
+
+    const fetchCodingStats = async () => {
+      try {
+        const response = await fetch("/api/coding");
+        if (response.ok) {
+          const data = await response.json();
+          setCodingStats({
+            totalHours: data.stats?.totalHours || 0,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch coding stats:", error);
+      }
+    };
+
     const fetchStreak = async () => {
       try {
         const response = await fetch("/api/streak");
@@ -73,7 +145,12 @@ export default function DashboardPage() {
           setStreakData({
             streak: data.streak,
             hasActivityToday: data.hasActivityToday,
-            streaks: data.streaks || { coding: 0, leetcode: 0, reading: 0 },
+            streaks: data.streaks || {
+              coding: 0,
+              leetcode: 0,
+              reading: 0,
+              gym: 0,
+            },
           });
         }
       } catch (error) {
@@ -81,8 +158,42 @@ export default function DashboardPage() {
       }
     };
 
+    const fetchRecentActivities = async () => {
+      try {
+        const response = await fetch("/api/activities");
+        if (response.ok) {
+          const data = await response.json();
+          setRecentActivities(data.activities?.slice(0, 5) || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch activities:", error);
+      }
+    };
+
+    const fetchWeeklyStats = async () => {
+      try {
+        const response = await fetch("/api/activities/weekly");
+        if (response.ok) {
+          const data = await response.json();
+          setWeeklyStats({
+            codingHours: data.weeklyStats?.codingHours || 0,
+            leetcodeSolved: data.weeklyStats?.leetcodeSolved || 0,
+            workouts: data.weeklyStats?.workouts || 0,
+            pagesRead: data.weeklyStats?.readingActivities || 0,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch weekly stats:", error);
+      }
+    };
+
     fetchBookStats();
+    fetchLeetcodeStats();
+    fetchWorkoutStats();
+    fetchCodingStats();
     fetchStreak();
+    fetchRecentActivities();
+    fetchWeeklyStats();
   }, []);
 
   // Mock data for other stats - replace with actual data fetching later
@@ -90,47 +201,12 @@ export default function DashboardPage() {
     stats: {
       booksGoal: 24,
       codingHours: 45,
-      githubCommits: 127,
+      workoutsDone: 45,
       leetcodeSolved: 42,
       jobsApplied: 8,
       projectsActive: 2,
       eventsAttended: 4,
     },
-    recentActivity: [
-      {
-        type: "book",
-        title: "Finished 'Atomic Habits'",
-        time: "2 hours ago",
-        icon: BookOpen,
-      },
-      {
-        type: "leetcode",
-        title: "Solved 'Two Sum' (Easy)",
-        time: "5 hours ago",
-        icon: Trophy,
-      },
-      {
-        type: "github",
-        title: "Pushed to my2026journey",
-        time: "Yesterday",
-        icon: Github,
-      },
-      {
-        type: "job",
-        title: "Applied to TechCorp",
-        time: "2 days ago",
-        icon: Briefcase,
-      },
-    ],
-    upcomingGoals: [
-      { title: "Finish current book", progress: 75, dueIn: "3 days" },
-      {
-        title: "Complete 50 LeetCode problems",
-        progress: 84,
-        dueIn: "2 weeks",
-      },
-      { title: "Launch MVP for side project", progress: 60, dueIn: "1 month" },
-    ],
   };
 
   return (
@@ -200,7 +276,7 @@ export default function DashboardPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="grid grid-cols-2 lg:grid-cols-4 gap-4"
+        className="grid grid-cols-2 lg:grid-cols-5 gap-4"
       >
         <Link href="/dashboard/reading">
           <StatCard
@@ -211,19 +287,28 @@ export default function DashboardPage() {
             color="blue"
           />
         </Link>
-        <Link href="/dashboard/github">
+        <Link href="/dashboard/coding">
           <StatCard
-            title="GitHub Commits"
-            value={dashboardData.stats.githubCommits}
-            subtitle="This year"
-            icon={Github}
+            title="Coding Hours"
+            value={codingStats.totalHours}
+            subtitle="Total logged"
+            icon={Clock}
             color="green"
+          />
+        </Link>
+        <Link href="/dashboard/gym">
+          <StatCard
+            title="Workouts Done"
+            value={workoutStats.totalWorkouts}
+            subtitle="This year"
+            icon={Dumbbell}
+            color="orange"
           />
         </Link>
         <Link href="/dashboard/leetcode">
           <StatCard
             title="LeetCode Solved"
-            value={dashboardData.stats.leetcodeSolved}
+            value={leetcodeStats.solved}
             subtitle="Problems"
             icon={Trophy}
             color="yellow"
@@ -253,7 +338,7 @@ export default function DashboardPage() {
               Current Streaks
             </CardTitle>
           </CardHeader>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             {[
               {
                 label: "Coding",
@@ -272,6 +357,12 @@ export default function DashboardPage() {
                 value: streakData.streaks.reading,
                 icon: BookOpen,
                 color: "bg-blue-100 text-blue-600",
+              },
+              {
+                label: "Gym",
+                value: streakData.streaks.gym || 0,
+                icon: Dumbbell,
+                color: "bg-orange-100 text-orange-600",
               },
             ].map((streak) => (
               <div
@@ -307,27 +398,77 @@ export default function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <div className="space-y-4">
-              {dashboardData.recentActivity.map((activity, index) => (
-                <div
-                  key={index}
-                  className="flex items-start gap-3 pb-4 border-b border-gray-100 last:border-0 last:pb-0"
-                >
-                  <div className="p-2 bg-gray-100 rounded-lg">
-                    <activity.icon className="w-4 h-4 text-gray-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">
-                      {activity.title}
-                    </p>
-                    <p className="text-xs text-gray-500">{activity.time}</p>
-                  </div>
-                </div>
-              ))}
+              {recentActivities.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-4">
+                  No recent activity. Start tracking your journey!
+                </p>
+              ) : (
+                recentActivities.map((activity) => {
+                  // Get icon based on activity type
+                  const getActivityIcon = (type: string) => {
+                    switch (type) {
+                      case "book":
+                        return BookOpen;
+                      case "coding":
+                        return Code2;
+                      case "leetcode":
+                        return Trophy;
+                      case "gym":
+                        return Dumbbell;
+                      case "job":
+                        return Briefcase;
+                      case "event":
+                        return Calendar;
+                      default:
+                        return Target;
+                    }
+                  };
+
+                  const getActivityColor = (type: string) => {
+                    switch (type) {
+                      case "book":
+                        return "bg-blue-100 text-blue-600";
+                      case "coding":
+                        return "bg-green-100 text-green-600";
+                      case "leetcode":
+                        return "bg-yellow-100 text-yellow-600";
+                      case "gym":
+                        return "bg-orange-100 text-orange-600";
+                      case "job":
+                        return "bg-purple-100 text-purple-600";
+                      case "event":
+                        return "bg-indigo-100 text-indigo-600";
+                      default:
+                        return "bg-gray-100 text-gray-600";
+                    }
+                  };
+
+                  const Icon = getActivityIcon(activity.type);
+                  const colorClass = getActivityColor(activity.type);
+
+                  return (
+                    <div
+                      key={activity.id}
+                      className="flex items-start gap-3 pb-4 border-b border-gray-100 last:border-0 last:pb-0"
+                    >
+                      <div className={`p-2 rounded-lg ${colorClass}`}>
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">
+                          {activity.title}
+                        </p>
+                        <p className="text-xs text-gray-500">{activity.time}</p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </Card>
         </motion.div>
 
-        {/* Upcoming Goals */}
+        {/* Weekly Summary */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -336,24 +477,55 @@ export default function DashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-gray-500" />
-                Upcoming Goals
+                <Calendar className="w-5 h-5 text-gray-500" />
+                This Week
               </CardTitle>
             </CardHeader>
-            <div className="space-y-4">
-              {dashboardData.upcomingGoals.map((goal, index) => (
-                <div key={index} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-gray-900">
-                      {goal.title}
-                    </p>
-                    <span className="text-xs text-gray-500">
-                      Due in {goal.dueIn}
-                    </span>
-                  </div>
-                  <ProgressBar value={goal.progress} showLabel />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-green-50 rounded-xl">
+                <div className="flex items-center gap-2 mb-1">
+                  <Code2 className="w-4 h-4 text-green-600" />
+                  <span className="text-sm text-green-600 font-medium">
+                    Coding
+                  </span>
                 </div>
-              ))}
+                <p className="text-2xl font-bold text-green-700">
+                  {weeklyStats.codingHours}h
+                </p>
+              </div>
+              <div className="p-4 bg-yellow-50 rounded-xl">
+                <div className="flex items-center gap-2 mb-1">
+                  <Trophy className="w-4 h-4 text-yellow-600" />
+                  <span className="text-sm text-yellow-600 font-medium">
+                    LeetCode
+                  </span>
+                </div>
+                <p className="text-2xl font-bold text-yellow-700">
+                  {weeklyStats.leetcodeSolved}
+                </p>
+              </div>
+              <div className="p-4 bg-orange-50 rounded-xl">
+                <div className="flex items-center gap-2 mb-1">
+                  <Dumbbell className="w-4 h-4 text-orange-600" />
+                  <span className="text-sm text-orange-600 font-medium">
+                    Workouts
+                  </span>
+                </div>
+                <p className="text-2xl font-bold text-orange-700">
+                  {weeklyStats.workouts}
+                </p>
+              </div>
+              <div className="p-4 bg-blue-50 rounded-xl">
+                <div className="flex items-center gap-2 mb-1">
+                  <BookOpen className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm text-blue-600 font-medium">
+                    Reading
+                  </span>
+                </div>
+                <p className="text-2xl font-bold text-blue-700">
+                  {weeklyStats.pagesRead}
+                </p>
+              </div>
             </div>
           </Card>
         </motion.div>
@@ -378,6 +550,12 @@ export default function DashboardPage() {
                 color: "bg-blue-100 text-blue-600",
               },
               {
+                label: "Log Workout",
+                icon: Dumbbell,
+                href: "/dashboard/gym",
+                color: "bg-orange-100 text-orange-600",
+              },
+              {
                 label: "Log Coding",
                 icon: Code2,
                 href: "/dashboard/coding",
@@ -394,12 +572,6 @@ export default function DashboardPage() {
                 icon: Briefcase,
                 href: "/dashboard/jobs",
                 color: "bg-purple-100 text-purple-600",
-              },
-              {
-                label: "New Project",
-                icon: Rocket,
-                href: "/dashboard/projects",
-                color: "bg-red-100 text-red-600",
               },
               {
                 label: "Add Event",

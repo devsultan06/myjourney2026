@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Trophy,
@@ -24,41 +24,20 @@ import Badge from "@/components/ui/Badge";
 import EmptyState from "@/components/ui/EmptyState";
 import StreakBadge from "@/components/ui/StreakBadge";
 import ProgressBar from "@/components/ui/ProgressBar";
-import { LeetCodeProblem } from "@/lib/types";
-import { generateId, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
-// Mock data
-const initialProblems: LeetCodeProblem[] = [
-  {
-    id: "1",
-    title: "Two Sum",
-    difficulty: "easy",
-    status: "solved",
-    solvedDate: new Date("2026-01-15"),
-    timeSpent: 15,
-    notes: "Used hash map for O(n) solution",
-    topics: ["Array", "Hash Table"],
-  },
-  {
-    id: "2",
-    title: "Add Two Numbers",
-    difficulty: "medium",
-    status: "solved",
-    solvedDate: new Date("2026-01-14"),
-    timeSpent: 30,
-    notes: "Linked list manipulation with carry handling",
-    topics: ["Linked List", "Math"],
-  },
-  {
-    id: "3",
-    title: "Median of Two Sorted Arrays",
-    difficulty: "hard",
-    status: "attempted",
-    timeSpent: 45,
-    notes: "Need to revisit binary search approach",
-    topics: ["Array", "Binary Search"],
-  },
-];
+interface LeetCodeProblem {
+  id: string;
+  title: string;
+  difficulty: "easy" | "medium" | "hard";
+  status: "not-started" | "attempted" | "solved";
+  solvedDate?: string | null;
+  timeSpent?: number | null;
+  notes?: string | null;
+  topics: string[];
+  leetcodeId?: number | null;
+  url?: string | null;
+}
 
 const topicsList = [
   "Array",
@@ -79,13 +58,16 @@ const topicsList = [
 ];
 
 export default function LeetCodePage() {
-  const [problems, setProblems] = useState<LeetCodeProblem[]>(initialProblems);
+  const [problems, setProblems] = useState<LeetCodeProblem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [editingProblem, setEditingProblem] = useState<LeetCodeProblem | null>(
     null
   );
   const [filterDifficulty, setFilterDifficulty] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [leetcodeStreak, setLeetcodeStreak] = useState(0);
   const [formData, setFormData] = useState({
     title: "",
     difficulty: "easy",
@@ -94,6 +76,38 @@ export default function LeetCodePage() {
     notes: "",
     topics: [] as string[],
   });
+
+  // Fetch problems from API
+  useEffect(() => {
+    fetchProblems();
+    fetchStreak();
+  }, []);
+
+  const fetchProblems = async () => {
+    try {
+      const response = await fetch("/api/leetcode");
+      if (response.ok) {
+        const data = await response.json();
+        setProblems(data.problems);
+      }
+    } catch (error) {
+      console.error("Failed to fetch problems:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchStreak = async () => {
+    try {
+      const response = await fetch("/api/streak");
+      if (response.ok) {
+        const data = await response.json();
+        setLeetcodeStreak(data.streaks?.leetcode || 0);
+      }
+    } catch (error) {
+      console.error("Failed to fetch streak:", error);
+    }
+  };
 
   const filteredProblems = problems.filter((p) => {
     const matchesDifficulty =
@@ -113,7 +127,7 @@ export default function LeetCodePage() {
     hard: problems.filter(
       (p) => p.status === "solved" && p.difficulty === "hard"
     ).length,
-    streak: 5,
+    streak: leetcodeStreak,
     totalTime: problems.reduce((acc, p) => acc + (p.timeSpent || 0), 0),
   };
 
@@ -143,38 +157,83 @@ export default function LeetCodePage() {
       difficulty: problem.difficulty,
       status: problem.status,
       timeSpent: problem.timeSpent?.toString() || "",
-      notes: problem.notes,
+      notes: problem.notes || "",
       topics: problem.topics,
     });
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const problemData: LeetCodeProblem = {
-      id: editingProblem?.id || generateId(),
-      title: formData.title,
-      difficulty: formData.difficulty as LeetCodeProblem["difficulty"],
-      status: formData.status as LeetCodeProblem["status"],
-      solvedDate: formData.status === "solved" ? new Date() : undefined,
-      timeSpent: parseInt(formData.timeSpent) || undefined,
-      notes: formData.notes,
-      topics: formData.topics,
-    };
+    setIsSaving(true);
 
-    if (editingProblem) {
-      setProblems(
-        problems.map((p) => (p.id === editingProblem.id ? problemData : p))
-      );
-    } else {
-      setProblems([problemData, ...problems]);
+    try {
+      if (editingProblem) {
+        // Update existing problem
+        const response = await fetch(`/api/leetcode/${editingProblem.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: formData.title,
+            difficulty: formData.difficulty,
+            status: formData.status,
+            timeSpent: formData.timeSpent,
+            notes: formData.notes,
+            topics: formData.topics,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setProblems(
+            problems.map((p) => (p.id === editingProblem.id ? data.problem : p))
+          );
+          await fetchStreak();
+        }
+      } else {
+        // Create new problem
+        const response = await fetch("/api/leetcode", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: formData.title,
+            difficulty: formData.difficulty,
+            status: formData.status,
+            timeSpent: formData.timeSpent,
+            notes: formData.notes,
+            topics: formData.topics,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setProblems([data.problem, ...problems]);
+          await fetchStreak();
+        }
+      }
+
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Failed to save problem:", error);
+    } finally {
+      setIsSaving(false);
     }
-
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    setProblems(problems.filter((p) => p.id !== id));
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this problem?")) return;
+
+    try {
+      const response = await fetch(`/api/leetcode/${id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setProblems(problems.filter((p) => p.id !== id));
+      }
+    } catch (error) {
+      console.error("Failed to delete problem:", error);
+    }
   };
 
   const getDifficultyBadge = (difficulty: LeetCodeProblem["difficulty"]) => {
@@ -198,6 +257,14 @@ export default function LeetCodePage() {
         return <Circle className="w-5 h-5 text-gray-300" />;
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -349,7 +416,7 @@ export default function LeetCodePage() {
                     {problem.solvedDate && (
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
-                        {formatDate(problem.solvedDate)}
+                        {formatDate(new Date(problem.solvedDate))}
                       </span>
                     )}
                   </div>
@@ -485,7 +552,7 @@ export default function LeetCodePage() {
             >
               Cancel
             </Button>
-            <Button type="submit" className="flex-1">
+            <Button type="submit" className="flex-1" isLoading={isSaving}>
               {editingProblem ? "Save Changes" : "Add Problem"}
             </Button>
           </div>

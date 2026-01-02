@@ -92,6 +92,7 @@ export async function GET() {
       coding: calculateStreak(activityByType["coding"] || []),
       leetcode: calculateStreak(activityByType["leetcode"] || []),
       reading: calculateStreak(activityByType["book"] || []),
+      gym: calculateStreak(activityByType["gym"] || []),
     };
 
     // Check if user has activity today

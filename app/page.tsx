@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import {
   BookOpen,
   Code2,
-  Github,
+  Dumbbell,
   Trophy,
   Briefcase,
   Rocket,
@@ -35,11 +35,11 @@ const features = [
     color: "text-green-600 bg-green-100",
   },
   {
-    icon: Github,
-    title: "GitHub Activity",
+    icon: Dumbbell,
+    title: "Gym Tracker",
     description:
-      "Visualize your contribution graph and track commits across repositories.",
-    color: "text-gray-600 bg-gray-100",
+      "Track daily exercises like push-ups, maintain workout streaks, and build consistency.",
+    color: "text-orange-600 bg-orange-100",
   },
   {
     icon: Trophy,
@@ -183,10 +183,10 @@ export default function LandingPage() {
                       color: "text-blue-600",
                     },
                     {
-                      label: "GitHub Commits",
-                      value: "847",
-                      icon: Github,
-                      color: "text-gray-700",
+                      label: "Workouts Done",
+                      value: "45",
+                      icon: Dumbbell,
+                      color: "text-orange-600",
                     },
                     {
                       label: "LeetCode Solved",
