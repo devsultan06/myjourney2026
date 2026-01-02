@@ -27,6 +27,22 @@ model User {
   jobApplications JobApplication[]
   projects        Project[]
   events          Event[]
+  activities      Activity[]
+}
+
+// Activity Tracker for Streaks
+model Activity {
+  id        String   @id @default(cuid())
+  type      String   // book, coding, leetcode, job, project, event, etc.
+  action    String   // created, updated, completed, etc.
+  details   String?  // Optional description
+  date      DateTime @default(now()) @db.Date // Store just the date for streak calculation
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
 }
 
 // Reading Tracker

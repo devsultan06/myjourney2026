@@ -82,6 +82,8 @@ export default function SignupPage() {
             {[
               { icon: "📚", label: "Reading", desc: "Track books" },
               { icon: "💻", label: "Coding", desc: "Log practice" },
+              { icon: "📖", label: "Quran", desc: "Track recitation" },
+              { icon: "🕋", label: "Hadith", desc: "Daily learning" },
               { icon: "🎯", label: "LeetCode", desc: "Solve problems" },
               { icon: "💼", label: "Jobs", desc: "Track applications" },
               { icon: "🚀", label: "Projects", desc: "Build & launch" },

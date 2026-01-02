@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   BookOpen,
@@ -21,58 +22,116 @@ import ProgressBar from "@/components/ui/ProgressBar";
 import StreakBadge from "@/components/ui/StreakBadge";
 import { getYearProgress } from "@/lib/utils";
 
-// Mock data - replace with actual data fetching
-const dashboardData = {
-  stats: {
-    booksRead: 3,
-    booksGoal: 24,
-    codingHours: 45,
-    githubCommits: 127,
-    leetcodeSolved: 42,
-    jobsApplied: 8,
-    projectsActive: 2,
-    eventsAttended: 4,
-  },
-  streaks: {
-    coding: 12,
-    leetcode: 5,
-    reading: 8,
-  },
-  recentActivity: [
-    {
-      type: "book",
-      title: "Finished 'Atomic Habits'",
-      time: "2 hours ago",
-      icon: BookOpen,
-    },
-    {
-      type: "leetcode",
-      title: "Solved 'Two Sum' (Easy)",
-      time: "5 hours ago",
-      icon: Trophy,
-    },
-    {
-      type: "github",
-      title: "Pushed to my2026journey",
-      time: "Yesterday",
-      icon: Github,
-    },
-    {
-      type: "job",
-      title: "Applied to TechCorp",
-      time: "2 days ago",
-      icon: Briefcase,
-    },
-  ],
-  upcomingGoals: [
-    { title: "Finish current book", progress: 75, dueIn: "3 days" },
-    { title: "Complete 50 LeetCode problems", progress: 84, dueIn: "2 weeks" },
-    { title: "Launch MVP for side project", progress: 60, dueIn: "1 month" },
-  ],
-};
-
 export default function DashboardPage() {
   const yearProgress = getYearProgress();
+
+  // Book stats from API
+  const [bookStats, setBookStats] = useState({
+    completed: 0,
+    total: 0,
+    reading: 0,
+  });
+
+  // Streak from API
+  const [streakData, setStreakData] = useState({
+    streak: 0,
+    hasActivityToday: false,
+    streaks: {
+      coding: 0,
+      leetcode: 0,
+      reading: 0,
+    },
+  });
+
+  useEffect(() => {
+    const fetchBookStats = async () => {
+      try {
+        const response = await fetch("/api/books");
+        if (response.ok) {
+          const data = await response.json();
+          const books = data.books || [];
+          setBookStats({
+            completed: books.filter(
+              (b: { status: string }) => b.status === "completed"
+            ).length,
+            total: books.length,
+            reading: books.filter(
+              (b: { status: string }) => b.status === "reading"
+            ).length,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch book stats:", error);
+      }
+    };
+
+    const fetchStreak = async () => {
+      try {
+        const response = await fetch("/api/streak");
+        if (response.ok) {
+          const data = await response.json();
+          setStreakData({
+            streak: data.streak,
+            hasActivityToday: data.hasActivityToday,
+            streaks: data.streaks || { coding: 0, leetcode: 0, reading: 0 },
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch streak:", error);
+      }
+    };
+
+    fetchBookStats();
+    fetchStreak();
+  }, []);
+
+  // Mock data for other stats - replace with actual data fetching later
+  const dashboardData = {
+    stats: {
+      booksGoal: 24,
+      codingHours: 45,
+      githubCommits: 127,
+      leetcodeSolved: 42,
+      jobsApplied: 8,
+      projectsActive: 2,
+      eventsAttended: 4,
+    },
+    recentActivity: [
+      {
+        type: "book",
+        title: "Finished 'Atomic Habits'",
+        time: "2 hours ago",
+        icon: BookOpen,
+      },
+      {
+        type: "leetcode",
+        title: "Solved 'Two Sum' (Easy)",
+        time: "5 hours ago",
+        icon: Trophy,
+      },
+      {
+        type: "github",
+        title: "Pushed to my2026journey",
+        time: "Yesterday",
+        icon: Github,
+      },
+      {
+        type: "job",
+        title: "Applied to TechCorp",
+        time: "2 days ago",
+        icon: Briefcase,
+      },
+    ],
+    upcomingGoals: [
+      { title: "Finish current book", progress: 75, dueIn: "3 days" },
+      {
+        title: "Complete 50 LeetCode problems",
+        progress: 84,
+        dueIn: "2 weeks",
+      },
+      { title: "Launch MVP for side project", progress: 60, dueIn: "1 month" },
+    ],
+  };
 
   return (
     <div className="space-y-8">
@@ -92,8 +151,8 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-4">
           <StreakBadge
-            count={dashboardData.streaks.coding}
-            label="day streak"
+            count={streakData.streak}
+            label={streakData.hasActivityToday ? "day streak 🔥" : "day streak"}
           />
         </div>
       </motion.div>
@@ -146,8 +205,8 @@ export default function DashboardPage() {
         <Link href="/dashboard/reading">
           <StatCard
             title="Books Read"
-            value={`${dashboardData.stats.booksRead}/${dashboardData.stats.booksGoal}`}
-            subtitle="This year"
+            value={`${bookStats.completed}/${dashboardData.stats.booksGoal}`}
+            subtitle={`${bookStats.reading} currently reading`}
             icon={BookOpen}
             color="blue"
           />
@@ -198,19 +257,19 @@ export default function DashboardPage() {
             {[
               {
                 label: "Coding",
-                value: dashboardData.streaks.coding,
+                value: streakData.streaks.coding,
                 icon: Code2,
                 color: "bg-green-100 text-green-600",
               },
               {
                 label: "LeetCode",
-                value: dashboardData.streaks.leetcode,
+                value: streakData.streaks.leetcode,
                 icon: Trophy,
                 color: "bg-yellow-100 text-yellow-600",
               },
               {
                 label: "Reading",
-                value: dashboardData.streaks.reading,
+                value: streakData.streaks.reading,
                 icon: BookOpen,
                 color: "bg-blue-100 text-blue-600",
               },

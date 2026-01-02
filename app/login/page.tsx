@@ -185,6 +185,7 @@ export default function LoginPage() {
             {[
               "📚 12 books read on average",
               "💻 500+ coding problems solved",
+              "🕋 Daily Hadith learning",
               "🎯 90% goal completion rate",
             ].map((stat, index) => (
               <motion.div

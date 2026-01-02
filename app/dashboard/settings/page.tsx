@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   User,
   Bell,
@@ -21,9 +21,10 @@ import Checkbox from "@/components/ui/Checkbox";
 
 export default function SettingsPage() {
   const [profile, setProfile] = useState({
-    name: "Dev Sultan",
-    email: "dev@example.com",
+    username: "",
+    email: "",
   });
+  const [isLoading, setIsLoading] = useState(true);
 
   const [notifications, setNotifications] = useState({
     dailyReminder: true,
@@ -34,14 +35,42 @@ export default function SettingsPage() {
 
   const [isSaving, setIsSaving] = useState(false);
 
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const response = await fetch("/api/auth/me");
+        if (response.ok) {
+          const data = await response.json();
+          setProfile({
+            username: data.user.username,
+            email: data.user.email,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch user data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchUserData();
+  }, []);
+
   const handleSaveProfile = async () => {
     setIsSaving(true);
     await new Promise((resolve) => setTimeout(resolve, 1000));
     setIsSaving(false);
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
@@ -65,7 +94,7 @@ export default function SettingsPage() {
           <div className="flex items-center gap-4">
             <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
               <span className="text-2xl font-bold text-white">
-                {profile.name.charAt(0)}
+                {profile.username.charAt(0).toUpperCase()}
               </span>
             </div>
             <div>
@@ -76,9 +105,11 @@ export default function SettingsPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              label="Full Name"
-              value={profile.name}
-              onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+              label="Username"
+              value={profile.username}
+              onChange={(e) =>
+                setProfile({ ...profile, username: e.target.value })
+              }
             />
             <Input
               label="Email"

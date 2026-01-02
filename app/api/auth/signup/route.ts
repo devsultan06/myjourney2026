@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
-import { createServerSupabaseClient } from "@/lib/supabase";
+import { createToken, setAuthCookie } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
@@ -66,35 +66,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create user in Supabase Auth
-    const supabase = createServerSupabaseClient();
-    const { data: authData, error: authError } =
-      await supabase.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
-      });
-
-    if (authError) {
-      console.error("Supabase auth error:", authError);
-      return NextResponse.json(
-        { error: "Failed to create account. Please try again." },
-        { status: 500 }
-      );
-    }
-
     // Hash password for local storage
     const passwordHash = await bcrypt.hash(password, 12);
 
     // Create user in database
     const user = await prisma.user.create({
       data: {
-        id: authData.user.id, // Use Supabase user ID
         username,
         email,
         passwordHash,
       },
     });
+
+    // Create JWT token
+    const token = await createToken({
+      userId: user.id,
+      username: user.username,
+      email: user.email,
+    });
+
+    // Set auth cookie
+    await setAuthCookie(token);
 
     return NextResponse.json(
       {

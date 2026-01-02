@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   BookOpen,
@@ -16,62 +16,57 @@ import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
-import Select from "@/components/ui/Select";
 import ProgressBar from "@/components/ui/ProgressBar";
 import Badge from "@/components/ui/Badge";
 import EmptyState from "@/components/ui/EmptyState";
-import { Book } from "@/lib/types";
-import { generateId } from "@/lib/utils";
 
-// Mock data
-const initialBooks: Book[] = [
-  {
-    id: "1",
-    title: "Atomic Habits",
-    author: "James Clear",
-    totalPages: 320,
-    currentPage: 320,
-    status: "completed",
-    startDate: new Date("2026-01-01"),
-    completedDate: new Date("2026-01-15"),
-    notes: "Great book on building better habits.",
-    rating: 5,
-  },
-  {
-    id: "2",
-    title: "The Pragmatic Programmer",
-    author: "David Thomas, Andrew Hunt",
-    totalPages: 352,
-    currentPage: 180,
-    status: "reading",
-    startDate: new Date("2026-01-16"),
-    notes: "Learning a lot about software craftsmanship.",
-  },
-  {
-    id: "3",
-    title: "Clean Code",
-    author: "Robert C. Martin",
-    totalPages: 464,
-    currentPage: 0,
-    status: "not-started",
-    notes: "",
-  },
-];
+interface Book {
+  id: string;
+  title: string;
+  author: string;
+  totalPages: number;
+  currentPage: number;
+  status: "not-started" | "reading" | "completed";
+  startDate?: string | null;
+  completedDate?: string | null;
+  notes?: string | null;
+  rating?: number | null;
+}
 
 export default function ReadingPage() {
-  const [books, setBooks] = useState<Book[]>(initialBooks);
+  const [books, setBooks] = useState<Book[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBook, setEditingBook] = useState<Book | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     author: "",
     totalPages: "",
     currentPage: "",
-    status: "not-started",
     notes: "",
   });
+
+  // Fetch books from API
+  useEffect(() => {
+    fetchBooks();
+  }, []);
+
+  const fetchBooks = async () => {
+    try {
+      const response = await fetch("/api/books");
+      if (response.ok) {
+        const data = await response.json();
+        setBooks(data.books);
+      }
+    } catch (error) {
+      console.error("Failed to fetch books:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredBooks = books.filter((book) => {
     const matchesSearch =
@@ -97,7 +92,6 @@ export default function ReadingPage() {
       author: "",
       totalPages: "",
       currentPage: "",
-      status: "not-started",
       notes: "",
     });
     setIsModalOpen(true);
@@ -110,48 +104,80 @@ export default function ReadingPage() {
       author: book.author,
       totalPages: book.totalPages.toString(),
       currentPage: book.currentPage.toString(),
-      status: book.status,
-      notes: book.notes,
+      notes: book.notes || "",
     });
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const bookData: Book = {
-      id: editingBook?.id || generateId(),
-      title: formData.title,
-      author: formData.author,
-      totalPages: parseInt(formData.totalPages) || 0,
-      currentPage: parseInt(formData.currentPage) || 0,
-      status: formData.status as Book["status"],
-      notes: formData.notes,
-      startDate: editingBook?.startDate,
-      completedDate: editingBook?.completedDate,
-    };
+    setIsSaving(true);
 
-    if (bookData.status === "reading" && !bookData.startDate) {
-      bookData.startDate = new Date();
-    }
-    if (bookData.status === "completed") {
-      bookData.completedDate = new Date();
-      bookData.currentPage = bookData.totalPages;
-    }
+    try {
+      if (editingBook) {
+        // Update existing book
+        const response = await fetch(`/api/books/${editingBook.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: formData.title,
+            author: formData.author,
+            totalPages: formData.totalPages,
+            currentPage: formData.currentPage,
+            notes: formData.notes,
+          }),
+        });
 
-    if (editingBook) {
-      setBooks(books.map((b) => (b.id === editingBook.id ? bookData : b)));
-    } else {
-      setBooks([...books, bookData]);
-    }
+        if (response.ok) {
+          const data = await response.json();
+          setBooks(books.map((b) => (b.id === editingBook.id ? data.book : b)));
+        }
+      } else {
+        // Create new book
+        const response = await fetch("/api/books", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: formData.title,
+            author: formData.author,
+            totalPages: formData.totalPages,
+            currentPage: formData.currentPage || "0",
+            notes: formData.notes,
+          }),
+        });
 
-    setIsModalOpen(false);
+        if (response.ok) {
+          const data = await response.json();
+          setBooks([data.book, ...books]);
+        }
+      }
+
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Failed to save book:", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    setBooks(books.filter((b) => b.id !== id));
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this book?")) return;
+
+    try {
+      const response = await fetch(`/api/books/${id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setBooks(books.filter((b) => b.id !== id));
+      }
+    } catch (error) {
+      console.error("Failed to delete book:", error);
+    }
   };
 
-  const updateProgress = (id: string, currentPage: number) => {
+  const updateProgress = async (id: string, currentPage: number) => {
+    // Optimistically update UI
     setBooks(
       books.map((b) => {
         if (b.id === id) {
@@ -161,21 +187,23 @@ export default function ReadingPage() {
               : currentPage > 0
               ? "reading"
               : "not-started";
-          return {
-            ...b,
-            currentPage,
-            status: newStatus,
-            completedDate:
-              newStatus === "completed" ? new Date() : b.completedDate,
-            startDate:
-              newStatus === "reading" && !b.startDate
-                ? new Date()
-                : b.startDate,
-          };
+          return { ...b, currentPage, status: newStatus };
         }
         return b;
       })
     );
+
+    // Update in database
+    try {
+      await fetch(`/api/books/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPage }),
+      });
+    } catch (error) {
+      console.error("Failed to update progress:", error);
+      fetchBooks();
+    }
   };
 
   const getStatusBadge = (status: Book["status"]) => {
@@ -188,6 +216,14 @@ export default function ReadingPage() {
         return <Badge variant="default">Not Started</Badge>;
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -339,7 +375,7 @@ export default function ReadingPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-2">
-                    {book.status === "reading" && (
+                    {book.status !== "completed" && (
                       <input
                         type="number"
                         value={book.currentPage}
@@ -427,18 +463,10 @@ export default function ReadingPage() {
               }
             />
           </div>
-          <Select
-            label="Status"
-            value={formData.status}
-            onChange={(e) =>
-              setFormData({ ...formData, status: e.target.value })
-            }
-            options={[
-              { value: "not-started", label: "Not Started" },
-              { value: "reading", label: "Currently Reading" },
-              { value: "completed", label: "Completed" },
-            ]}
-          />
+          <p className="text-xs text-gray-500">
+            Status is automatically set based on your progress: 0 pages = Not
+            Started, 1+ pages = Reading, All pages = Completed
+          </p>
           <Textarea
             label="Notes"
             placeholder="Add any notes about this book..."
@@ -457,7 +485,7 @@ export default function ReadingPage() {
             >
               Cancel
             </Button>
-            <Button type="submit" className="flex-1">
+            <Button type="submit" className="flex-1" isLoading={isSaving}>
               {editingBook ? "Save Changes" : "Add Book"}
             </Button>
           </div>

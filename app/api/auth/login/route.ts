@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
-import { supabase } from "@/lib/supabase";
+import { createToken, setAuthCookie } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,20 +37,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Sign in with Supabase
-    const { data: authData, error: authError } =
-      await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+    // Create JWT token
+    const token = await createToken({
+      userId: user.id,
+      username: user.username,
+      email: user.email,
+    });
 
-    if (authError) {
-      console.error("Supabase auth error:", authError);
-      return NextResponse.json(
-        { error: "Authentication failed. Please try again." },
-        { status: 500 }
-      );
-    }
+    // Set auth cookie
+    await setAuthCookie(token);
 
     return NextResponse.json(
       {
@@ -61,7 +56,6 @@ export async function POST(request: NextRequest) {
           email: user.email,
           avatar: user.avatar,
         },
-        session: authData.session,
       },
       { status: 200 }
     );

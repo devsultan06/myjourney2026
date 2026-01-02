@@ -6,11 +6,16 @@ import { defineConfig } from "prisma/config";
 export default defineConfig({
   earlyAccess: true,
   schema: "prisma/schema.prisma",
+  datasource: {
+    // Use DIRECT_URL for migrations/db push (no connection pooling)
+    url: process.env.DIRECT_URL!,
+  },
   migrate: {
     async adapter() {
       const { PrismaPg } = await import("@prisma/adapter-pg");
       const { Pool } = await import("pg");
-      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      // Use DIRECT_URL for migrations
+      const pool = new Pool({ connectionString: process.env.DIRECT_URL });
       return new PrismaPg(pool);
     },
   },

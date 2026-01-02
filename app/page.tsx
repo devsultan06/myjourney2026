@@ -14,6 +14,8 @@ import {
   Sparkles,
   TrendingUp,
   Target,
+  Moon,
+  Star,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 
@@ -59,6 +61,20 @@ const features = [
     description:
       "Track milestones, set deadlines, and monitor progress on your side projects.",
     color: "text-red-600 bg-red-100",
+  },
+  {
+    icon: Moon,
+    title: "Quran Tracker",
+    description:
+      "Track daily Quran reading, pages read, and Juz completion throughout the year.",
+    color: "text-emerald-600 bg-emerald-100",
+  },
+  {
+    icon: Star,
+    title: "Hadith Learning",
+    description:
+      "Log hadith studied daily, track memorization progress, and build consistency.",
+    color: "text-amber-600 bg-amber-100",
   },
 ];
 
@@ -120,9 +136,9 @@ export default function LandingPage() {
               your most productive year yet
             </h1>
             <p className="mt-6 text-xl text-gray-600 max-w-2xl mx-auto">
-              Track your reading, coding, job applications, projects, and more.
-              All in one beautiful, intuitive dashboard designed to keep you
-              motivated and focused.
+              Track your reading, coding, projects, Quran, Hadith, job
+              applications, and more. All in one beautiful, intuitive dashboard
+              designed to keep you motivated and focused.
             </p>
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link href="/signup">
@@ -214,8 +230,9 @@ export default function LandingPage() {
               Everything you need to track your growth
             </h2>
             <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
-              From reading goals to job applications, manage all aspects of your
-              personal development journey.
+              From reading goals to job applications, Quran & Hadith tracking to
+              coding practice — manage all aspects of your personal and
+              spiritual development journey.
             </p>
           </div>
 
@@ -291,6 +308,8 @@ export default function LandingPage() {
                     { label: "Read 24 books", progress: 50 },
                     { label: "500 LeetCode problems", progress: 31 },
                     { label: "Launch 2 projects", progress: 50 },
+                    { label: "Complete Quran (30 Juz)", progress: 40 },
+                    { label: "Learn 365 Hadith", progress: 25 },
                   ].map((goal) => (
                     <div key={goal.label}>
                       <div className="flex justify-between text-sm mb-1">
