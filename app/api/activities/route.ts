@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyToken, getAuthCookie } from "@/lib/auth";
+import { Activity } from "@prisma/client";
 
 // GET /api/activities - Get recent activities for the current user
 export async function GET() {
@@ -23,7 +24,7 @@ export async function GET() {
     });
 
     // Format activities with relative time
-    const formattedActivities = activities.map((activity) => {
+    const formattedActivities = activities.map((activity: Activity) => {
       const now = new Date();
       const activityDate = new Date(activity.createdAt);
       const diffMs = now.getTime() - activityDate.getTime();

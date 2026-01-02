@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyToken, getAuthCookie } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { parseLocalDate, getLocalDateString } from "@/lib/utils";
+import { DailyTask } from "@prisma/client";
 
 // Helper to get current user ID
 async function getCurrentUserId(): Promise<string | null> {
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
 
     // Get completion stats
     const totalTasks = tasks.length;
-    const completedTasks = tasks.filter((t) => t.isCompleted).length;
+    const completedTasks = tasks.filter((t: DailyTask) => t.isCompleted).length;
 
     return NextResponse.json({
       tasks,
