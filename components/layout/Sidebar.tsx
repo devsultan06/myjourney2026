@@ -18,11 +18,12 @@ import {
   Trophy,
   X,
   ListTodo,
+  Crown,
 } from "lucide-react";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Daily Tasks", href: "/dashboard/tasks", icon: ListTodo },
+
   { name: "Reading List", href: "/dashboard/reading", icon: BookOpen },
   { name: "Coding Practice", href: "/dashboard/coding", icon: Code2 },
   { name: "Gym Tracker", href: "/dashboard/gym", icon: Dumbbell },
@@ -30,6 +31,8 @@ const navigation = [
   { name: "Job Applications", href: "/dashboard/jobs", icon: Briefcase },
   // { name: "Startup Projects", href: "/dashboard/projects", icon: Rocket },
   { name: "Events", href: "/dashboard/events", icon: Calendar },
+    { name: "Leaderboard", href: "/dashboard/leaderboard", icon: Crown },
+  { name: "Daily Tasks", href: "/dashboard/tasks", icon: ListTodo },
 ];
 
 interface SidebarProps {
