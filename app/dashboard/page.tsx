@@ -222,7 +222,6 @@ export default function DashboardPage() {
     fetchJobStats();
   }, []);
 
-  // Mock data for other stats - replace with actual data fetching later
   const dashboardData = {
     stats: {
       booksGoal: 24,
@@ -402,7 +401,6 @@ export default function DashboardPage() {
         </Card>
       </motion.div>
 
-      {/* Two Column Layout */}
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Recent Activity */}
         <motion.div
@@ -424,7 +422,6 @@ export default function DashboardPage() {
                 </p>
               ) : (
                 recentActivities.map((activity) => {
-                  // Get icon based on activity type
                   const getActivityIcon = (type: string) => {
                     switch (type) {
                       case "book":
