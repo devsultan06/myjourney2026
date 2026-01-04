@@ -48,6 +48,7 @@ export default function GymPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [gymStreak, setGymStreak] = useState(0);
+  const [totalPushups, setTotalPushups] = useState(0);
   const [formData, setFormData] = useState({
     exerciseType: "Push-ups",
     target: "20",
@@ -68,6 +69,7 @@ export default function GymPage() {
       if (response.ok) {
         const data = await response.json();
         setExercises(data.exercises);
+        setTotalPushups(data.stats?.totalPushups || 0);
       }
     } catch (error) {
       console.error("Failed to fetch exercises:", error);
@@ -309,6 +311,13 @@ export default function GymPage() {
       >
         {[
           {
+            label: "Total Push-ups",
+            value: totalPushups,
+            icon: Dumbbell,
+            color: "bg-red-100 text-red-600",
+            suffix: " reps",
+          },
+          {
             label: "Current Streak",
             value: stats.streak,
             icon: Flame,
@@ -328,13 +337,6 @@ export default function GymPage() {
             icon: TrendingUp,
             color: "bg-green-100 text-green-600",
             suffix: "",
-          },
-          {
-            label: "Daily Goal",
-            value: "20",
-            icon: Target,
-            color: "bg-purple-100 text-purple-600",
-            suffix: " push-ups",
           },
         ].map((stat) => (
           <Card key={stat.label} padding="sm">

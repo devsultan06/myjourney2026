@@ -53,12 +53,23 @@ export async function GET(request: NextRequest) {
       return getDateStringFromDB(new Date(e.date)) === todayStr;
     });
 
+    // Calculate total reps by exercise type
+    const totalsByType: Record<string, number> = {};
+    exercises.forEach((e) => {
+      if (e.isCompleted) {
+        const type = e.exerciseType.toLowerCase();
+        totalsByType[type] = (totalsByType[type] || 0) + e.completed;
+      }
+    });
+
     return NextResponse.json({
       exercises,
       stats: {
         totalWorkouts,
         todayCompleted: todayExercises.filter((e) => e.isCompleted).length,
         todayExercises: todayExercises.length,
+        totalPushups: totalsByType["push-ups"] || 0,
+        totalsByType,
       },
     });
   } catch (error) {
